@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RAG Simulator</title>
+<style>
+    body {
+        font-family: 'Segoe UI', sans-serif;
+        background: #0f172a;
+        color: white;
+        margin: 0;
+        padding: 0;
+    }
+
+    header {
+        text-align: center;
+        padding: 20px;
+        font-size: 24px;
+        font-weight: bold;
+        background: #1e293b;
+    }
+
+    .container {
+        display: flex;
+        height: calc(100vh - 70px);
+    }
+
+    .panel {
+        flex: 1;
+        padding: 20px;
+        border-right: 1px solid #334155;
+        overflow-y: auto;
+    }
+
+    .panel:last-child {
+        border-right: none;
+    }
+
+    h2 {
+        margin-top: 0;
+        color: #38bdf8;
+    }
+
+    textarea, input {
+        width: 100%;
+        padding: 10px;
+        border-radius: 8px;
+        border: none;
+        margin-top: 10px;
+        background: #1e293b;
+        color: white;
+    }
+
+    button {
+        margin-top: 10px;
+        padding: 10px;
+        border: none;
+        border-radius: 8px;
+        background: #38bdf8;
+        color: black;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .chunk {
+        background: #1e293b;
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 8px;
+    }
+
+    .highlight {
+        border: 2px solid #22c55e;
+    }
+
+    .output {
+        background: #020617;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 10px;
+    }
+
+    .step {
+        margin-top: 15px;
+        font-size: 14px;
+        color: #94a3b8;
+    }
+</style>
+</head>
+
+<body>
+
+<header>🧠 RAG Simulator (Retrieve → Augment → Generate)</header>
+
+<div class="container">
+
+    <!-- Knowledge Base -->
+    <div class="panel">
+        <h2>📚 Knowledge Base</h2>
+        <div id="kb"></div>
+    </div>
+
+    <!-- Query + Retrieval -->
+    <div class="panel">
+        <h2>🔍 Retrieval</h2>
+        <input id="query" placeholder="Enter your query..." />
+        <button onclick="runRetrieval()">Run Retrieval</button>
+
+        <div class="step">Top Retrieved Chunks:</div>
+        <div id="retrieved"></div>
+    </div>
+
+    <!-- Augmentation -->
+    <div class="panel">
+        <h2>🧩 Augmentation</h2>
+        <button onclick="runAugmentation()">Build Prompt</button>
+
+        <div class="output" id="augmentedPrompt"></div>
+    </div>
+
+    <!-- Generation -->
+    <div class="panel">
+        <h2>🤖 Generation</h2>
+        <button onclick="runGeneration()">Generate Answer</button>
+
+        <div class="output" id="finalAnswer"></div>
+    </div>
+
+</div>
+
+<script>
+const knowledgeBase = [
+    "RAG improves LLM accuracy by grounding responses.",
+    "Vector databases store embeddings for semantic search.",
+    "Chunking breaks large documents into smaller parts.",
+    "Embeddings convert text into numerical vectors.",
+    "ANN enables fast approximate similarity search.",
+    "Augmentation combines query and retrieved context.",
+    "LLMs generate responses using given context."
+];
+
+function displayKB() {
+    const kbDiv = document.getElementById("kb");
+    kbDiv.innerHTML = "";
+    knowledgeBase.forEach((chunk, index) => {
+        kbDiv.innerHTML += `<div class="chunk" id="chunk-${index}">${chunk}</div>`;
+    });
+}
+
+displayKB();
+
+let retrievedChunks = [];
+
+function similarity(a, b) {
+    a = a.toLowerCase();
+    b = b.toLowerCase();
+    let score = 0;
+    a.split(" ").forEach(word => {
+        if (b.includes(word)) score++;
+    });
+    return score;
+}
+
+function runRetrieval() {
+    const query = document.getElementById("query").value;
+
+    const scores = knowledgeBase.map((chunk, i) => ({
+        index: i,
+        text: chunk,
+        score: similarity(query, chunk)
+    }));
+
+    scores.sort((a, b) => b.score - a.score);
+
+    retrievedChunks = scores.slice(0, 3);
+
+    document.querySelectorAll(".chunk").forEach(el => el.classList.remove("highlight"));
+
+    const retrievedDiv = document.getElementById("retrieved");
+    retrievedDiv.innerHTML = "";
+
+    retrievedChunks.forEach(item => {
+        document.getElementById(`chunk-${item.index}`).classList.add("highlight");
+        retrievedDiv.innerHTML += `<div class="chunk">${item.text}</div>`;
+    });
+}
+
+function runAugmentation() {
+    const query = document.getElementById("query").value;
+
+    let context = retrievedChunks.map(c => c.text).join("\n");
+
+    const prompt = `
+Answer the question using the context below:
+
+Context:
+${context}
+
+Question:
+${query}
+`;
+
+    document.getElementById("augmentedPrompt").innerText = prompt;
+}
+
+function runGeneration() {
+    const query = document.getElementById("query").value;
+
+    let context = retrievedChunks.map(c => c.text).join(" ");
+
+    const answer = `
+Based on the retrieved knowledge, here's the answer:
+
+"${context}"
+
+Answering your question: "${query}"
+`;
+
+    document.getElementById("finalAnswer").innerText = answer;
+}
+</script>
+
+</body>
+</html>
